@@ -130,7 +130,7 @@ func _build_drone() -> void:
 func _build_target() -> void:
 	_target = Node3D.new()
 	_target.name = "PyBulletTarget"
-	_target.position = Vector3(44.75, 1.0, 0.0)
+	_target.position = Vector3(24.75, 1.0, 0.0)
 	add_child(_target)
 	var truck := Node3D.new()
 	truck.name = "RedTruck"

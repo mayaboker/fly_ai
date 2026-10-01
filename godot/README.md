@@ -22,6 +22,10 @@ godot --path godot
 uv run fly-smart --godot --headless
 ```
 
+The default truck distance is 30 m from launch. Pass, for example,
+`--target-distance-m 50` to the Python command to move its visual and collision
+50 m ahead of the configured launch X position.
+
 Godot renders a camera fixed to the PyBullet-driven drone and its enlarged red
 target truck, positioned side-on across the road. Python remains responsible
 for OpenCV red detection, TTC filtering, guidance, motor commands, and

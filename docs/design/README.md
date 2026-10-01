@@ -31,3 +31,4 @@ implementation commit hash; a commit cannot contain its own final hash.
 | [Deadline-based real-time pacing](deadline-realtime-pacing.md) | Pace GUI and Godot runs against absolute monotonic deadlines. | Implemented | `d5ecf6d` | — |
 | [Godot 30 Hz FPV capture](godot-30hz-camera.md) | Align unique Godot frames with the configured 30 Hz camera cadence. | Implemented | `3330205` | — |
 | [Godot red truck target](godot-red-truck-target.md) | Replace the target cube with an enlarged, side-on red truck and matching collision. | Implemented | Pending | — |
+| [CLI target distance](cli-target-distance.md) | Default the truck to 30 m and allow per-run distance overrides. | Implemented | Pending | — |

@@ -1,10 +1,10 @@
 """Command-line adapter for the TTC diagonal-strike package."""
 
 import argparse
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime
 import json
-from math import isclose
+from math import isclose, isfinite
 from pathlib import Path
 
 import cv2
@@ -19,6 +19,25 @@ from ..sensing import BarometerReading
 from .runner import StrikeSimulation
 from ..trajectory import TtcDescentPlanner
 from ..ttc import BboxTtcTracker
+
+
+def target_distance(value: str) -> float:
+    """Parse one finite positive target distance for argparse."""
+    try:
+        distance_m = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("target distance must be a number") from exc
+    if not isfinite(distance_m) or distance_m <= 0.0:
+        raise argparse.ArgumentTypeError("target distance must be finite and greater than zero")
+    return distance_m
+
+
+def with_target_distance(config: StrikeConfig, distance_m: float) -> StrikeConfig:
+    """Return config with the target placed ``distance_m`` along launch +X."""
+    launch_x = config.simulation.launch_position[0]
+    _, target_y, target_z = config.simulation.target_center
+    simulation = replace(config.simulation, target_center=(launch_x + distance_m, target_y, target_z))
+    return replace(config, simulation=simulation)
 
 
 def self_check() -> None:
@@ -77,6 +96,7 @@ def main() -> None:
     parser.add_argument("--output-root", type=Path, default=Path("outputs/ttc_runs"))
     parser.add_argument("--run-name", type=str)
     parser.add_argument("--config", type=Path, help="Grouped YAML file with simulation and runtime settings")
+    parser.add_argument("--target-distance-m", type=target_distance, help="Place the simulation target this far ahead of launch along +X")
     parser.add_argument("--video", type=Path)
     parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--plot", type=Path)
@@ -94,12 +114,16 @@ def main() -> None:
                 config = load_yaml_config(args.config) if args.config else StrikeConfig()
             except (OSError, ValueError) as exc:
                 parser.error(str(exc))
+            if args.target_distance_m is not None:
+                config = with_target_distance(config, args.target_distance_m)
             run_name = args.run_name or datetime.now().strftime("run-%Y%m%d-%H%M%S-%f")
             run_dir = args.output_root / run_name
             run_dir.mkdir(parents=True, exist_ok=False)
             settings = {"simulation": asdict(config.simulation), "runtime": asdict(config.runtime)}
             if args.config:
                 settings["source_config"] = str(args.config)
+            if args.target_distance_m is not None:
+                settings["cli_overrides"] = {"target_distance_m": args.target_distance_m}
             (run_dir / "settings.json").write_text(json.dumps(settings, indent=2) + "\n")
             video = args.video or run_dir / "environment.mp4"
             plot = args.plot or run_dir / "telemetry.png"

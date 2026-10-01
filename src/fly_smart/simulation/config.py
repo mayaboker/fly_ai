@@ -11,7 +11,7 @@ class SimulationConfig:
     """Simulator scene, vehicle model, synthetic sensors, and display defaults."""
 
     launch_position: tuple[float, float, float] = (-5.25, 0.0, 0.05)
-    target_center: tuple[float, float, float] = (44.75, 0.0, 1.0)
+    target_center: tuple[float, float, float] = (24.75, 0.0, 1.0)
     target_size_m: float = 2.0
     drone_profile: str = "default"
     gravity_mps2: float = 9.81

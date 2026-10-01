@@ -15,6 +15,13 @@ uv sync
 uv run fly-smart --config configs/scenario.yaml
 ```
 
+The default truck is 30 m ahead of launch. Override its simulation distance
+for one run without editing YAML:
+
+```bash
+uv run fly-smart --godot --config configs/scenario.yaml --target-distance-m 50
+```
+
 Useful checks:
 
 ```bash

@@ -13,6 +13,9 @@ X=24.75 m position and 50 m ahead of the launch position. Keep Y, altitude,
 orientation, and dimensions unchanged. Scenario configuration remains the
 authoritative target pose sent to Godot.
 
+The later CLI target-distance design restores X=24.75 m (30 m from launch) as
+the project default while retaining arbitrary per-run distances.
+
 ## Visual design and collision
 
 Build the truck from native Godot meshes: red chassis, cargo body, cab and
