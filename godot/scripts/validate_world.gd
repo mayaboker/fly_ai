@@ -13,7 +13,7 @@ func _init() -> void:
 	await process_frame
 
 	_assert_close(world.terrain_height(-30.0, 0.0), 0.0, "road start must stay level")
-	_assert_close(world.terrain_height(24.75, 3.9), 0.0, "target corridor must stay level")
+	_assert_close(world.terrain_height(44.75, 3.9), 0.0, "target corridor must stay level")
 	if world.terrain_height(30.0, 30.0) <= 0.0:
 		_fail("terrain outside the corridor must have positive relief")
 	if world.get_node_or_null("ForestTerrain3D") == null:

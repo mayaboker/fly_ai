@@ -27,6 +27,10 @@ uv run pytest -q
 Each run is written to `outputs/ttc_runs/<run-name>/` with settings, CSV
 telemetry, summary, and plots.
 
+See [Simulation loop and Godot data flow](docs/simulation-loop-and-godot-flow.md)
+for the timing model, process ownership, UDP messages, shared-memory camera,
+and one complete physics iteration.
+
 ## Run the seven-inch trainer
 
 ```bash

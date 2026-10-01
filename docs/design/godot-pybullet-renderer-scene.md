@@ -42,8 +42,8 @@ authority. Godot cameras look along local `-z`; the scene rotates their mount
 offsets them 0.35 m in front of the received drone pose.
 
 Before the first UDP packet, the preview target uses the default target center
-after axis conversion: Godot `(24.75, 1, 0)`. Its 2 m cube then spans from
-ground level to 2 m above it instead of appearing half underground.
+after axis conversion: Godot `(44.75, 1, 0)`. The live scenario pose replaces
+this fallback as soon as the first packet arrives.
 
 The Godot window uses a separate spectator camera that orbits the received
 drone pose. Hold the right mouse button and drag to orbit; use the wheel to
@@ -65,11 +65,11 @@ the target in front of the FPV camera. A top-right legend labels Godot world
 axes (`x` right, `y` up, `z` out of screen); it is display-only.
 
 For the default scenario, the launch position is `(-5.25, 0, 0.05)`. Set the
-static target center to `(24.75, 0, 1)`, exactly 30 m along the positive world
-x flight axis from launch. Its 2 m edge gives a red `2 × 2 × 2 m` PyBullet
-collision cube and identically sized Godot rendering. This shortens the old
-35.25 m initial separation by 5.25 m; TTC and guidance remain unchanged, but
-their visual measurement begins at the new physical distance.
+static target center to `(44.75, 0, 1)`, exactly 50 m along the positive world
+x flight axis from launch. Godot renders the enlarged red truck and owns its
+matching collision proxy during Godot runs; the compatibility PyBullet view
+continues to use `target_size_m` for its red cube. TTC and guidance remain
+image-driven and receive no target-position input.
 
 ## Validation
 

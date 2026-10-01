@@ -130,10 +130,47 @@ func _build_drone() -> void:
 func _build_target() -> void:
 	_target = Node3D.new()
 	_target.name = "PyBulletTarget"
-	_target.position = Vector3(24.75, 1.0, 0.0)
+	_target.position = Vector3(44.75, 1.0, 0.0)
 	add_child(_target)
-	_add_box(_target, Vector3.ZERO, Vector3(2, 2, 2), Color(0.9, 0.05, 0.05))
-	_add_collision_body(_target, Vector3.ZERO, Vector3(2, 2, 2), "target")
+	var truck := Node3D.new()
+	truck.name = "RedTruck"
+	truck.rotation.y = PI / 2.0
+	_target.add_child(truck)
+	_build_truck_visual(truck)
+	_add_collision_body(truck, Vector3(0, 0.25, 0), Vector3(4.8, 2.5, 2.4), "target")
+
+
+func _build_truck_visual(parent: Node) -> void:
+	"""Build a detailed red truck facing along its local positive X axis."""
+	var body_red := Color(0.86, 0.035, 0.035)
+	var trim_red := Color(0.62, 0.018, 0.018)
+	var dark := Color(0.025, 0.035, 0.045)
+	var glass := Color(0.08, 0.18, 0.24)
+	var metal := Color(0.34, 0.37, 0.4)
+	var lamp := Color(0.95, 0.82, 0.42)
+	# Frame, rear cargo body, cab, hood and roof.
+	_add_box(parent, Vector3(0, -0.48, 0), Vector3(4.65, 0.28, 1.85), trim_red)
+	_add_box(parent, Vector3(-0.72, 0.35, 0), Vector3(2.55, 1.65, 2.05), body_red)
+	_add_box(parent, Vector3(1.08, 0.30, 0), Vector3(1.05, 1.55, 1.92), body_red)
+	_add_box(parent, Vector3(1.90, -0.12, 0), Vector3(0.65, 0.70, 1.90), body_red)
+	_add_box(parent, Vector3(1.08, 1.10, 0), Vector3(1.18, 0.12, 2.02), trim_red)
+	# Windshield and side windows leave the dominant detector color red.
+	_add_box(parent, Vector3(1.62, 0.58, 0), Vector3(0.045, 0.64, 1.55), glass)
+	_add_box(parent, Vector3(1.08, 0.58, -0.982), Vector3(0.68, 0.62, 0.045), glass)
+	_add_box(parent, Vector3(1.08, 0.58, 0.982), Vector3(0.68, 0.62, 0.045), glass)
+	# Grille, bumpers, lights, mirrors and rear step add a readable silhouette.
+	_add_box(parent, Vector3(2.30, -0.17, 0), Vector3(0.06, 0.45, 1.35), dark)
+	_add_box(parent, Vector3(2.36, -0.53, 0), Vector3(0.12, 0.20, 2.08), metal)
+	_add_box(parent, Vector3(-2.32, -0.50, 0), Vector3(0.12, 0.20, 2.08), metal)
+	for z in [-0.70, 0.70]:
+		_add_box(parent, Vector3(2.34, 0.05, z), Vector3(0.07, 0.25, 0.32), lamp)
+	for z in [-1.13, 1.13]:
+		_add_box(parent, Vector3(1.38, 0.62, z), Vector3(0.12, 0.20, 0.20), dark)
+	# Tires and metallic hubs are slightly proud of the body sides.
+	for x in [-1.48, 1.43]:
+		for z in [-1.03, 1.03]:
+			_add_cylinder(parent, Vector3(x, -0.58, z), 0.42, 0.24, dark)
+			_add_cylinder(parent, Vector3(x, -0.58, z * 1.07), 0.18, 0.05, metal)
 
 
 func _receive_latest_pose() -> void:
@@ -423,6 +460,23 @@ func _add_box(parent: Node, pos: Vector3, size: Vector3, color: Color) -> void:
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.position = pos
+	parent.add_child(instance)
+
+
+func _add_cylinder(parent: Node, pos: Vector3, radius: float, width: float, color: Color) -> void:
+	"""Add a wheel cylinder whose axle runs across the truck's local Z axis."""
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = width
+	mesh.radial_segments = 16
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	mesh.material = material
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.position = pos
+	instance.rotation.x = PI / 2.0
 	parent.add_child(instance)
 
 

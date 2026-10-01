@@ -22,9 +22,10 @@ godot --path godot
 uv run fly-smart --godot --headless
 ```
 
-Godot renders a camera fixed to the PyBullet-driven drone and its red 2 m
-target cube. Python remains responsible for OpenCV red detection, TTC
-filtering, guidance, motor commands, and PyBullet flight forces. For a
+Godot renders a camera fixed to the PyBullet-driven drone and its enlarged red
+target truck, positioned side-on across the road. Python remains responsible
+for OpenCV red detection, TTC filtering, guidance, motor commands, and
+PyBullet flight forces. For a
 `--godot` run, Godot sends target and building collision events back to Python;
 the target completes the mission and a building aborts it.
 

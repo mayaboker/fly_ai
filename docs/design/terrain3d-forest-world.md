@@ -33,4 +33,4 @@ are recorded alongside the bundled assets.
 Load the project under Godot 4.3's compatibility renderer, validate deterministic
 world geometry and the flat corridor, run Python tests and self-check, and
 inspect camera frames for false red detections. Confirm selected trees and
-rocks report obstacle collisions while the red cube remains the only target.
+rocks report obstacle collisions while the red truck remains the only target.

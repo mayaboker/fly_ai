@@ -5,7 +5,7 @@ simulation:
     profile: default                    # Shared drone profile; URDF supplies mass/inertia.
   scene:
     launch_position: [-5.25, 0.0, 0.05]  # Initial world position in metres.
-    target_center: [24.75, 0.0, 1.0]     # 30 m ahead of the launch position.
+    target_center: [44.75, 0.0, 1.0]     # 50 m ahead of the launch position.
     target_size_m: 2.0                   # Static cube edge length.
   physical_forces:
     body_drag:
