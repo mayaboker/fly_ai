@@ -86,6 +86,7 @@ class StrikeSimulation:
         show_frame = gui
         latest_profile_time_s = 0.0
         attempt_wall_start: float | None = None
+        attempt_finalized = False
         pacer = RealTimePacer(time_step) if gui or self.godot else None
 
         def measure(stage: str):
@@ -124,10 +125,10 @@ class StrikeSimulation:
             nonlocal engine, barometer, tracker, guidance, vertical_imu, vertical_estimator
             nonlocal previous_vertical_velocity_mps, attitude_controller, torque, command, baro
             nonlocal observation, target_visible, impact_speed, stop_at_s, log, writer
-            nonlocal attempt_wall_start
+            nonlocal attempt_wall_start, attempt_finalized
             if writer:
                 writer.release()
-            if interactive and attempt_number:
+            if interactive and attempt_number and not attempt_finalized:
                 if attempt_plot:
                     save_plot(log, config, self.scene, attempt_plot, self.scenario_name)
                 if attempt_csv:
@@ -147,6 +148,7 @@ class StrikeSimulation:
                         attempt_summary,
                     )
             attempt_number += 1
+            attempt_finalized = False
             if interactive and summary:
                 attempt_dir = summary.parent / f"attempt-{attempt_number:03d}"
                 attempt_video = attempt_dir / video.name if video else None
@@ -184,10 +186,13 @@ class StrikeSimulation:
         reset_attempt()
 
         def finish(success: bool, phase: str, now_s: float, abort_reason: str | None = None) -> StrikeResult:
-            nonlocal latest_profile_time_s
+            nonlocal latest_profile_time_s, writer, attempt_finalized
             latest_profile_time_s = now_s
             if profiler:
                 profiler.finish(now_s)
+            if writer:
+                writer.release()
+                writer = None
             if attempt_plot:
                 save_plot(log, config, self.scene, attempt_plot, self.scenario_name)
             if attempt_csv:
@@ -196,8 +201,31 @@ class StrikeSimulation:
             summary_data = build_summary(log, config, self.scene, success, phase, now_s, {"video": attempt_video, "plot": attempt_plot, "csv": attempt_csv, "summary": attempt_summary}, abort_reason)
             if attempt_summary:
                 save_summary(summary_data, attempt_summary)
+            attempt_finalized = True
             self._print_summary(result, summary_data)
             return result
+
+        def complete_attempt(success: bool, phase: str, now_s: float, abort_reason: str | None = None) -> StrikeResult | None:
+            """Finish one attempt, or wait for Restart in an interactive session."""
+            result = finish(success, phase, now_s, abort_reason)
+            if controls is None:
+                return result
+            controls.stop()
+            if self.godot:
+                self.godot.publish_control_state(True, False, completed=True)
+            while True:
+                apply_control_commands()
+                if controls.exit_requested:
+                    return result
+                if controls.consume_reset():
+                    reset_attempt()
+                    controls.start()
+                    if self.godot:
+                        self.godot.publish_control_state(True, True)
+                    return None
+                time.sleep(0.02)
+                if show_frame:
+                    cv2.waitKey(1)
 
         def finish_if_disconnected(now_s: float) -> StrikeResult | None:
             """Save the partial run when closing the PyBullet GUI disconnects its server."""
@@ -207,7 +235,7 @@ class StrikeSimulation:
 
         try:
             step = 0
-            while step < round(max_seconds / time_step):
+            while True:
                 if controls:
                     apply_control_commands()
                     while not controls.running:
@@ -226,6 +254,13 @@ class StrikeSimulation:
                         reset_attempt()
                         step = 0
                         continue
+                if step >= round(max_seconds / time_step):
+                    print(f"Strike timed out in {command.phase.value} phase")
+                    completed = complete_attempt(False, command.phase.value, max_seconds)
+                    if completed is not None:
+                        return completed
+                    step = 0
+                    continue
                 now_s = step * time_step
                 if attempt_wall_start is None:
                     attempt_wall_start = time.perf_counter()
@@ -294,10 +329,18 @@ class StrikeSimulation:
                         )
                     if command.commit_expired:
                         print("Commit deadline expired without contact")
-                        return finish(False, command.phase.value, now_s)
+                        completed = complete_attempt(False, command.phase.value, now_s)
+                        if completed is not None:
+                            return completed
+                        step = 0
+                        continue
                     if command.phase == FlightPhase.ABORT:
                         last_height = tracker.last_observation.box[3] if tracker.last_observation else 0
-                        return finish(False, command.phase.value, now_s, f"target lost before commit (last bbox height {last_height:g} px)")
+                        completed = complete_attempt(False, command.phase.value, now_s, f"target lost before commit (last bbox height {last_height:g} px)")
+                        if completed is not None:
+                            return completed
+                        step = 0
+                        continue
 
                 # thrust_n is the collective force. Split it evenly before
                 # mapping force to a PWM signal for the four motors.
@@ -359,13 +402,21 @@ class StrikeSimulation:
                     if live_plot:
                         live_plot.mark_collision(now_s)
                 elif stop_at_s is None and collision_kind == "obstacle":
-                    return finish(False, command.phase.value, now_s, "Godot obstacle collision")
+                    completed = complete_attempt(False, command.phase.value, now_s, "Godot obstacle collision")
+                    if completed is not None:
+                        return completed
+                    step = 0
+                    continue
                 if stop_at_s is not None and now_s >= stop_at_s:
                     # Contact is the geometry-free success condition.  Keep
                     # impact speed as telemetry instead of rejecting a valid
                     # strike because the simulated vehicle model is tuned
                     # differently from a real airframe.
-                    return finish(True, "post-impact", now_s)
+                    completed = complete_attempt(True, "post-impact", now_s)
+                    if completed is not None:
+                        return completed
+                    step = 0
+                    continue
 
                 with measure("plot_display"):
                     if show_frame:
@@ -386,8 +437,6 @@ class StrikeSimulation:
                 if profiler:
                     profiler.end_step(camera_status, pacing_result)
                 step += 1
-            print(f"Strike timed out in {command.phase.value} phase")
-            return finish(False, command.phase.value, max_seconds)
         except p.error:
             # The GUI can close between two PyBullet calls (for example while
             # the forward camera renders).  Preserve telemetry in that case;

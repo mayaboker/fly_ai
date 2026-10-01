@@ -191,7 +191,11 @@ func _receive_latest_pose() -> void:
 			_update_hud(telemetry)
 		var controls: Variant = value.get("controls")
 		if controls is Dictionary:
-			_update_control_panel(bool(controls.get("enabled", false)), bool(controls.get("running", false)))
+			_update_control_panel(
+				bool(controls.get("enabled", false)),
+				bool(controls.get("running", false)),
+				bool(controls.get("completed", false)),
+			)
 		var render_settings: Variant = value.get("render_settings")
 		if render_settings is Dictionary:
 			_configure_capture_hz(render_settings.get("capture_hz"))
@@ -379,11 +383,11 @@ func _send_control(command: String) -> void:
 	_collision_socket.put_packet(JSON.stringify({"event": "control", "command": command}).to_utf8_buffer())
 
 
-func _update_control_panel(enabled: bool, running: bool) -> void:
+func _update_control_panel(enabled: bool, running: bool, completed: bool) -> void:
 	"""Reflect Python's authoritative interactive state in the controls."""
 	_control_panel.visible = enabled
-	_start_button.disabled = running
-	_pause_button.disabled = not running
+	_start_button.disabled = running or completed
+	_pause_button.disabled = not running or completed
 
 
 func _clear_hud() -> void:

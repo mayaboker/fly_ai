@@ -75,9 +75,11 @@ def test_publish_control_state_uses_renderer_channel():
     bridge.destination = ("127.0.0.1", 9100)
     bridge._socket = _RecordingSocket()
 
-    bridge.publish_control_state(enabled=True, running=False)
+    bridge.publish_control_state(enabled=True, running=False, completed=True)
 
-    assert json.loads(bridge._socket.payload) == {"controls": {"enabled": True, "running": False}}
+    assert json.loads(bridge._socket.payload) == {
+        "controls": {"enabled": True, "running": False, "completed": True}
+    }
 
 
 def test_publish_render_settings_uses_configured_camera_rate():

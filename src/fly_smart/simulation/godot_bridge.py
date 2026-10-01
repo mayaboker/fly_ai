@@ -75,9 +75,9 @@ class GodotBridge:
         """Publish display-only flight state without changing renderer poses."""
         self._send({"telemetry": sanitize_telemetry(telemetry)})
 
-    def publish_control_state(self, enabled: bool, running: bool) -> None:
+    def publish_control_state(self, enabled: bool, running: bool, completed: bool = False) -> None:
         """Tell Godot whether to show controls and which actions are valid."""
-        self._send({"controls": {"enabled": enabled, "running": running}})
+        self._send({"controls": {"enabled": enabled, "running": running, "completed": completed}})
 
     def publish_render_settings(self, capture_hz: int) -> None:
         """Configure renderer-owned behavior from the authoritative scenario."""
