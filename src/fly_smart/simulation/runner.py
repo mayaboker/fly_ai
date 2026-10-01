@@ -409,4 +409,5 @@ class StrikeSimulation:
             print(f"telemetry CSV: {result.csv}")
         if result.summary:
             print(f"run summary: {result.summary}")
-        print("environment: red target cube and 3 static buildings")
+        environment = "Terrain3D forest, road, rocks, trees, and red target cube" if self.godot else "red target cube and 3 static buildings"
+        print(f"environment: {environment}")

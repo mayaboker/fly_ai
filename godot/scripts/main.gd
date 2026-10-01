@@ -13,6 +13,7 @@ const FPV_MOUNT := Transform3D(Basis(Vector3.UP, -PI / 2.0), Vector3(0.35, 0.05,
 const SPECTATOR_TURN_SPEED := 0.01
 const PREVIEW_POSITION := Vector2(10, 10)
 const PREVIEW_SIZE := Vector2(480, 270)
+const TERRAIN_WORLD_SCRIPT := preload("res://scripts/terrain_world.gd")
 
 var _drone: Node3D
 var _target: Node3D
@@ -83,29 +84,9 @@ func _update_spectator_camera() -> void:
 
 
 func _build_world() -> void:
-	var env := WorldEnvironment.new()
-	var settings := Environment.new()
-	settings.background_mode = Environment.BG_COLOR
-	settings.background_color = Color(0.50, 0.73, 0.93)
-	settings.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	settings.ambient_light_color = Color(0.75, 0.82, 0.9)
-	env.environment = settings
-	add_child(env)
-
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-55, -25, 0)
-	sun.light_energy = 1.5
-	add_child(sun)
-
-	_add_box(self, Vector3(10, -0.15, 0), Vector3(80, 0.3, 80), Color(0.34, 0.53, 0.29))
-	_add_box(self, Vector3(10, 0.02, 0), Vector3(80, 0.05, 3.2), Color(0.22, 0.24, 0.26))
-	for x in range(-25, 50, 5):
-		_add_box(self, Vector3(x, 0.06, 0), Vector3(2.0, 0.01, 0.08), Color(0.95, 0.86, 0.46))
-	for i in range(9):
-		var x := -20.0 + float(i) * 8.0
-		var height := 1.2 + float(i % 3) * 0.55
-		_add_obstacle(self, Vector3(x, height * 0.5, -6), Vector3(2.1, height, 2.1), Color(0.16, 0.38, 0.72))
-		_add_obstacle(self, Vector3(x - 2, height * 0.5, 6), Vector3(2.1, height, 2.1), Color(0.12, 0.28, 0.58))
+	var world := TERRAIN_WORLD_SCRIPT.new()
+	world.name = "TerrainWorld"
+	add_child(world)
 
 
 func _build_drone() -> void:
@@ -120,8 +101,12 @@ func _build_drone() -> void:
 	_collision_sensor = Area3D.new()
 	var drone_shape := CollisionShape3D.new()
 	var drone_box := BoxShape3D.new()
-	drone_box.size = Vector3(0.9, 0.25, 0.9)
+	# Keep the trigger above the launch surface while retaining the full arm span.
+	# The old centered box dipped below the 0.05 m launch pose and immediately
+	# latched Terrain3D's ground collision before the flight began.
+	drone_box.size = Vector3(0.9, 0.16, 0.9)
 	drone_shape.shape = drone_box
+	drone_shape.position = Vector3(0, 0.12, 0)
 	_collision_sensor.add_child(drone_shape)
 	_collision_sensor.body_entered.connect(_on_drone_body_entered)
 	_drone.add_child(_collision_sensor)
@@ -344,11 +329,6 @@ func _add_box(parent: Node, pos: Vector3, size: Vector3, color: Color) -> void:
 	instance.mesh = mesh
 	instance.position = pos
 	parent.add_child(instance)
-
-
-func _add_obstacle(parent: Node, pos: Vector3, size: Vector3, color: Color) -> void:
-	_add_box(parent, pos, size, color)
-	_add_collision_body(parent, pos, size, "obstacle")
 
 
 func _add_collision_body(parent: Node, pos: Vector3, size: Vector3, kind: String) -> void:

@@ -12,7 +12,9 @@ outcomes for Godot-backed runs.
 
 When launched with `--godot`, Godot owns mission collision decisions. It gives
 the received drone a trigger volume and the red target plus roadside buildings
-static collision volumes. A target contact sends `target` over UDP port 9101
+static collision volumes. The Terrain3D forest replaces those placeholder
+blocks with selected collidable trees, rocks, and terrain while preserving the
+same event contract. A target contact sends `target` over UDP port 9101
 and completes the mission; a building contact sends `obstacle` and aborts the
 mission. PyBullet still advances the vehicle, but its drone-to-target contact
 query is not used on this path. The regular non-Godot run retains its existing
@@ -52,8 +54,8 @@ The on-screen FPV preview has a thin blue UI border. It belongs to the overlay
 only and does not modify the shared-memory camera image consumed by Python.
 
 The spectator view renders a lightweight quadcopter made from a center body
-and four blue rotor pads. Roadside blocks are also blue so the red detector's
-low-red HSV range sees only the red target. Its initial 8 m orbit distance
+and four blue rotor pads. The forest uses green and neutral materials so the
+red detector's low-red HSV range continues to isolate the red target. Its initial 8 m orbit distance
 makes the physical drone visible without adding a model asset or changing its
 PyBullet collision shape.
 

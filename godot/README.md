@@ -5,6 +5,12 @@ PyBullet drone and target poses on UDP `127.0.0.1:9100`. Its FPV `SubViewport`
 is copied as RGB8 frames into `/dev/shm/fly_smart_fpv.rgb` using the working
 double-buffered format from `godot_shm_fpv`.
 
+The world uses the bundled Terrain3D 1.0.0 addon for Godot 4.3. A deterministic
+textured forest terrain stays level through the road corridor and rises gently
+away from it. Selected roadside trees and rocks are collision obstacles;
+additional scattered vegetation is display-only. All required addon binaries
+and CC0 environment assets are included for offline use.
+
 Run the Godot scene before Python:
 
 ```bash
@@ -25,6 +31,12 @@ the shared-memory image used for detection remains unannotated.
 
 In the Godot window, hold the right mouse button and drag to orbit the drone;
 scroll to zoom. These controls affect only the spectator view, not FPV output.
+
+Validate the generated landscape structure with:
+
+```bash
+godot --headless --path godot --script res://scripts/validate_world.gd
+```
 
 The interactive Python task opens the telemetry plot paused. Use **Start** to
 run and **Restart** to reset the Python and Godot poses before starting again.
