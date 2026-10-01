@@ -26,14 +26,22 @@ var _pose_socket := PacketPeerUDP.new()
 var _collision_socket := PacketPeerUDP.new()
 var _active_slot := 0
 var _sequence := 0
+var _capture_count := 0
+var _capture_total_usec := 0
+var _write_total_usec := 0
+var _performance_last_report_ms := 0
 var _latest_pose: Dictionary = {}
 var _collision_reported := false
 var _spectator_yaw := -PI / 2.0
 var _spectator_pitch := 0.35
 var _spectator_distance := 8.0
+var _timing_label: Label
 var _hud_label: Label
 var _target_label: Label
 var _bbox_panel: Panel
+var _control_panel: Panel
+var _start_button: Button
+var _pause_button: Button
 
 
 func _ready() -> void:
@@ -42,6 +50,7 @@ func _ready() -> void:
 	_build_target()
 	_build_cameras()
 	_collision_socket.connect_to_host("127.0.0.1", COLLISION_PORT)
+	_performance_last_report_ms = Time.get_ticks_msec()
 	var bind_error := _pose_socket.bind(POSE_PORT, "127.0.0.1")
 	if bind_error != OK:
 		push_error("Cannot listen for PyBullet poses on UDP %d: %s" % [POSE_PORT, bind_error])
@@ -55,6 +64,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	_receive_latest_pose()
+	_publish_performance_if_due()
 	var camera_transform := _drone.global_transform * FPV_MOUNT
 	_fpv_camera.global_transform = camera_transform
 	_update_spectator_camera()
@@ -137,6 +147,9 @@ func _receive_latest_pose() -> void:
 		var telemetry: Variant = value.get("telemetry")
 		if telemetry is Dictionary:
 			_update_hud(telemetry)
+		var controls: Variant = value.get("controls")
+		if controls is Dictionary:
+			_update_control_panel(bool(controls.get("enabled", false)), bool(controls.get("running", false)))
 
 
 func _apply_pose(raw_pose: Variant, node: Node3D) -> void:
@@ -199,6 +212,7 @@ func _build_cameras() -> void:
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	overlay.add_child(preview)
 	_build_hud(overlay)
+	_build_control_panel(overlay)
 
 	var axes := Label.new()
 	axes.name = "WorldAxes"
@@ -228,10 +242,21 @@ func _build_hud(overlay: CanvasLayer) -> void:
 	hud_panel.add_theme_stylebox_override("panel", hud_style)
 	overlay.add_child(hud_panel)
 
+	_timing_label = Label.new()
+	_timing_label.name = "AttemptTiming"
+	_timing_label.position = Vector2(8, 5)
+	_timing_label.size = Vector2(202, 20)
+	_timing_label.add_theme_font_size_override("font_size", 13)
+	_timing_label.add_theme_color_override("font_color", Color(0.55, 0.86, 1.0))
+	_timing_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_timing_label.add_theme_constant_override("shadow_offset_x", 1)
+	_timing_label.add_theme_constant_override("shadow_offset_y", 1)
+	hud_panel.add_child(_timing_label)
+
 	_hud_label = Label.new()
 	_hud_label.name = "FlightHUD"
-	_hud_label.position = Vector2(8, 6)
-	_hud_label.size = Vector2(202, 206)
+	_hud_label.position = Vector2(8, 27)
+	_hud_label.size = Vector2(202, 184)
 	_hud_label.add_theme_font_size_override("font_size", 13)
 	_hud_label.add_theme_color_override("font_color", Color.WHITE)
 	_hud_label.add_theme_color_override("font_shadow_color", Color.BLACK)
@@ -264,8 +289,62 @@ func _build_hud(overlay: CanvasLayer) -> void:
 	_clear_hud()
 
 
+func _build_control_panel(overlay: CanvasLayer) -> void:
+	"""Build interactive mission controls hidden during ordinary runs."""
+	_control_panel = Panel.new()
+	_control_panel.name = "SimulationControls"
+	_control_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_control_panel.offset_left = 10
+	_control_panel.offset_top = -50
+	_control_panel.offset_right = 158
+	_control_panel.offset_bottom = -10
+	_control_panel.visible = false
+	_control_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.02, 0.03, 0.05, 0.78)
+	style.corner_radius_top_left = 5
+	style.corner_radius_top_right = 5
+	style.corner_radius_bottom_left = 5
+	style.corner_radius_bottom_right = 5
+	_control_panel.add_theme_stylebox_override("panel", style)
+	overlay.add_child(_control_panel)
+	_start_button = _add_control_button("▶", "Start / resume", 6, "start", Color(0.35, 0.9, 0.48))
+	_pause_button = _add_control_button("Ⅱ", "Pause", 42, "pause", Color(1.0, 0.78, 0.25))
+	_add_control_button("↻", "Restart attempt", 78, "restart", Color(0.35, 0.72, 1.0))
+	_add_control_button("■", "Stop and save", 114, "stop", Color(1.0, 0.38, 0.34))
+
+
+func _add_control_button(icon_text: String, tooltip: String, x: float, command: String, color: Color) -> Button:
+	"""Add one button that reports a command to the Python authority."""
+	var button := Button.new()
+	button.text = icon_text
+	button.tooltip_text = tooltip
+	button.position = Vector2(x, 6)
+	button.size = Vector2(30, 28)
+	button.add_theme_font_size_override("font_size", 17)
+	button.add_theme_color_override("font_color", color)
+	button.add_theme_color_override("font_hover_color", color.lightened(0.18))
+	button.add_theme_color_override("font_pressed_color", color.darkened(0.12))
+	button.pressed.connect(func() -> void: _send_control(command))
+	_control_panel.add_child(button)
+	return button
+
+
+func _send_control(command: String) -> void:
+	_collision_socket.put_packet(JSON.stringify({"event": "control", "command": command}).to_utf8_buffer())
+
+
+func _update_control_panel(enabled: bool, running: bool) -> void:
+	"""Reflect Python's authoritative interactive state in the controls."""
+	_control_panel.visible = enabled
+	_start_button.disabled = running
+	_pause_button.disabled = not running
+
+
 func _clear_hud() -> void:
 	"""Remove telemetry and target annotations until Python sends fresh state."""
+	if _timing_label != null:
+		_timing_label.text = "ELAPSED --:--.-   RTF --"
 	if _hud_label != null:
 		_hud_label.text = "Waiting for flight telemetry..."
 	if _target_label != null:
@@ -276,6 +355,14 @@ func _clear_hud() -> void:
 
 func _update_hud(data: Dictionary) -> void:
 	"""Format Python telemetry and align its source-image bbox with the preview."""
+	var elapsed_s := maxf(0.0, float(data.get("wall_elapsed_s", 0.0)))
+	var elapsed_minutes := int(elapsed_s / 60.0)
+	var elapsed_remainder := elapsed_s - float(elapsed_minutes * 60)
+	_timing_label.text = "ELAPSED %02d:%04.1f   RTF %sx" % [
+		elapsed_minutes,
+		elapsed_remainder,
+		_number(data.get("real_time_factor"), 2),
+	]
 	var position: Variant = data.get("position_m")
 	var velocity: Variant = data.get("velocity_mps")
 	var lines := PackedStringArray([
@@ -374,13 +461,45 @@ func _open_shared_memory() -> void:
 func _capture_loop() -> void:
 	while is_inside_tree() and _shm != null:
 		await RenderingServer.frame_post_draw
+		var capture_started := Time.get_ticks_usec()
 		var image := _fpv_viewport.get_texture().get_image()
 		if not image.is_empty():
 			image.convert(Image.FORMAT_RGB8)
 			var pixels := image.get_data()
 			if pixels.size() == FRAME_BYTES:
+				_capture_total_usec += Time.get_ticks_usec() - capture_started
+				var write_started := Time.get_ticks_usec()
 				_write_frame(pixels)
+				_write_total_usec += Time.get_ticks_usec() - write_started
+				_capture_count += 1
 		await get_tree().create_timer(1.0 / FPS).timeout
+
+
+func _publish_performance_if_due() -> void:
+	"""Publish low-rate renderer counters over the existing event socket."""
+	var now_ms := Time.get_ticks_msec()
+	if now_ms - _performance_last_report_ms < 1000:
+		return
+	var capture_average_ms := 0.0
+	var write_average_ms := 0.0
+	if _capture_count > 0:
+		capture_average_ms = float(_capture_total_usec) / float(_capture_count) / 1000.0
+		write_average_ms = float(_write_total_usec) / float(_capture_count) / 1000.0
+	var metrics := {
+		"fps": Engine.get_frames_per_second(),
+		"process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+		"physics_process_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+		"capture_count": _capture_count,
+		"capture_average_ms": capture_average_ms,
+		"write_average_ms": write_average_ms,
+		"objects": Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
+		"draw_calls": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+	}
+	_collision_socket.put_packet(JSON.stringify({"event": "performance", "metrics": metrics}).to_utf8_buffer())
+	_capture_count = 0
+	_capture_total_usec = 0
+	_write_total_usec = 0
+	_performance_last_report_ms = now_ms
 
 
 func _write_frame(pixels: PackedByteArray) -> void:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from collections import deque
 import json
 from math import isfinite
 import mmap
@@ -15,6 +17,14 @@ import numpy as np
 HEADER = struct.Struct("<4s7I")
 HEADER_BYTES = HEADER.size
 COLLISION_PORT = 9101
+
+
+@dataclass(frozen=True)
+class FrameSample:
+    """One stable shared-memory frame and its producer sequence number."""
+
+    image: np.ndarray
+    sequence: int
 
 
 def sanitize_telemetry(value):
@@ -40,6 +50,9 @@ class GodotBridge:
         self._event_socket.setblocking(False)
         self._file = None
         self._mapping = None
+        self._pending_collision: str | None = None
+        self._performance_metrics: dict[str, object] | None = None
+        self._control_events: deque[str] = deque()
 
     def open(self) -> None:
         """Open the shared-memory-backed file created by Godot."""
@@ -62,12 +75,21 @@ class GodotBridge:
         """Publish display-only flight state without changing renderer poses."""
         self._send({"telemetry": sanitize_telemetry(telemetry)})
 
+    def publish_control_state(self, enabled: bool, running: bool) -> None:
+        """Tell Godot whether to show controls and which actions are valid."""
+        self._send({"controls": {"enabled": enabled, "running": running}})
+
     def _send(self, payload: dict[str, object]) -> None:
         """Encode and send one compact renderer packet."""
         self._socket.sendto(json.dumps(payload, separators=(",", ":"), allow_nan=False).encode("utf-8"), self.destination)
 
     def read_frame(self) -> np.ndarray | None:
         """Return one RGB frame, or ``None`` while Godot is writing a frame."""
+        sample = self.read_frame_sample()
+        return sample.image if sample else None
+
+    def read_frame_sample(self) -> FrameSample | None:
+        """Return one stable RGB frame with sequence metadata."""
         if self._mapping is None:
             return None
         magic, width, height, channels, slot, sequence, frame_bytes, _ = HEADER.unpack_from(self._mapping)
@@ -79,31 +101,51 @@ class GodotBridge:
         data = self._mapping[start : start + frame_bytes]
         if struct.unpack_from("<I", self._mapping, 20)[0] != sequence:
             return None
-        return np.frombuffer(data, dtype=np.uint8).reshape(height, width, channels).copy()
+        image = np.frombuffer(data, dtype=np.uint8).reshape(height, width, channels).copy()
+        return FrameSample(image, sequence)
 
     def read_collision_event(self) -> str | None:
         """Return Godot's newest target or obstacle collision event, if any."""
-        event = None
+        self._drain_events()
+        event, self._pending_collision = self._pending_collision, None
+        return event
+
+    def read_performance_metrics(self) -> dict[str, object] | None:
+        """Return the newest renderer counters received from Godot."""
+        self._drain_events()
+        metrics, self._performance_metrics = self._performance_metrics, None
+        return metrics
+
+    def read_control_events(self) -> list[str]:
+        """Drain ordered interactive commands received from Godot."""
+        self._drain_events()
+        commands = list(self._control_events)
+        self._control_events.clear()
+        return commands
+
+    def _drain_events(self) -> None:
+        """Route all queued Godot event packets without losing either kind."""
         while True:
             try:
                 payload, _ = self._event_socket.recvfrom(1024)
             except BlockingIOError:
-                return event
+                return
             try:
                 value = json.loads(payload)
             except (TypeError, json.JSONDecodeError):
                 continue
             kind = value.get("kind") if isinstance(value, dict) else None
             if isinstance(value, dict) and value.get("event") == "collision" and kind in {"target", "obstacle"}:
-                event = kind
+                self._pending_collision = kind
+            elif isinstance(value, dict) and value.get("event") == "performance" and isinstance(value.get("metrics"), dict):
+                self._performance_metrics = value["metrics"]
+            elif isinstance(value, dict) and value.get("event") == "control" and value.get("command") in {"start", "pause", "restart", "stop"}:
+                self._control_events.append(value["command"])
 
     def clear_collision_events(self) -> None:
         """Discard stale Godot collision events before a restarted attempt."""
-        while True:
-            try:
-                self._event_socket.recvfrom(1024)
-            except BlockingIOError:
-                return
+        self._drain_events()
+        self._pending_collision = None
 
     def close(self) -> None:
         if self._mapping is not None:

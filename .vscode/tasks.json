@@ -37,6 +37,19 @@
       "problemMatcher": []
     },
     {
+      "label": "Run Fly Smart Performance with Godot",
+      "type": "shell",
+      "command": "uv run fly-smart --godot --headless --config configs/scenario.yaml --profile-performance",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Profile Fly Smart and Godot",
+      "dependsOrder": "sequence",
+      "dependsOn": ["Run Godot Renderer", "Run Fly Smart Performance with Godot"],
+      "problemMatcher": []
+    },
+    {
       "label": "TTC self-check",
       "type": "shell",
       "command": "uv run fly-smart --self-check",

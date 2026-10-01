@@ -58,3 +58,21 @@ uv run fly-smart --godot --headless --config configs/scenario.yaml
 The Python process owns PyBullet physics and control. Godot renders poses
 received over UDP, provides the camera image consumed by OpenCV, and sends
 target or building collision events back for `--godot` mission outcomes.
+
+To record an offline performance profile, use the VS Code task
+**Profile Fly Smart and Godot** or run:
+
+```bash
+uv run fly-smart --godot --headless --config configs/scenario.yaml --profile-performance
+```
+
+The run folder then includes per-step and one-second CSV files, a
+Chrome/Perfetto trace, and an aggregate performance summary.
+
+Live telemetry plots run in a separate process and consume incremental samples
+through shared memory. In interactive Godot runs, mission controls appear in
+the Godot window so Matplotlib rendering cannot pause the flight loop.
+
+GUI and Godot runs use absolute-deadline pacing at the configured physics
+rate. Short processing overruns recover on later steps, while long stalls are
+rebased to avoid extended catch-up bursts.

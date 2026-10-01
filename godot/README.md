@@ -38,5 +38,6 @@ Validate the generated landscape structure with:
 godot --headless --path godot --script res://scripts/validate_world.gd
 ```
 
-The interactive Python task opens the telemetry plot paused. Use **Start** to
-run and **Restart** to reset the Python and Godot poses before starting again.
+The interactive Python task opens the telemetry plot in a separate process and
+shows a control panel below the FPV preview. Use **Start**, **Pause**,
+**Restart**, and **Stop** there; Python remains authoritative for attempt state.

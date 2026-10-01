@@ -14,6 +14,7 @@ from .config import SimulationConfig, StrikeConfig
 from .config_loader import load_yaml_config
 from ..guidance import FlightPhase, GuidanceInput, StrikeGuidance
 from .godot_bridge import GodotBridge
+from .performance import PerformanceProfiler
 from ..sensing import BarometerReading
 from .runner import StrikeSimulation
 from ..trajectory import TtcDescentPlanner
@@ -82,6 +83,7 @@ def main() -> None:
     parser.add_argument("--no-plot", action="store_true")
     parser.add_argument("--csv", type=Path)
     parser.add_argument("--no-csv", action="store_true")
+    parser.add_argument("--profile-performance", action="store_true", help="Write detailed loop timings and renderer counters")
     args = parser.parse_args()
     client = p.connect(p.DIRECT if args.headless or args.self_check or args.godot else p.GUI)
     try:
@@ -104,10 +106,25 @@ def main() -> None:
             csv = args.csv or run_dir / "telemetry.csv"
             summary = run_dir / "summary.json"
             bridge = GodotBridge() if args.godot else None
+            profiler = PerformanceProfiler(
+                run_dir,
+                config.simulation.physics_settings.physics_hz,
+                config.camera_hz,
+            ) if args.profile_performance else None
             scenario_name = args.config.stem if args.config else "default"
-            result = StrikeSimulation(config, godot=bridge, scenario_name=scenario_name).run(not args.headless and not args.godot, args.max_seconds, None if args.no_video else video, None if args.no_plot else plot, None if args.no_csv else csv, summary, args.show_plots, args.interactive)
+            result = StrikeSimulation(config, godot=bridge, scenario_name=scenario_name).run(
+                not args.headless and not args.godot,
+                args.max_seconds,
+                None if args.no_video else video,
+                None if args.no_plot else plot,
+                None if args.no_csv else csv,
+                summary,
+                args.show_plots,
+                args.interactive,
+                profiler,
+            )
             print(f"run folder: {run_dir}")
-            if args.headless:
+            if args.headless and not args.interactive:
                 assert result.success, f"Strike failed; impact speed was {result.impact_speed_mps:.1f} m/s"
     finally:
         cv2.destroyAllWindows()
