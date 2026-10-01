@@ -63,9 +63,12 @@ def forward_rgb(
     up_point, _ = p.multiplyTransforms(position, orientation, (0.0, 0.0, 1.0), (0, 0, 0, 1))
     up = tuple(axis - origin for axis, origin in zip(up_point, eye))
     view = p.computeViewMatrix(eye, world_target or target, (0, 0, 1) if world_target else up)
-    projection = p.computeProjectionMatrixFOV(fov=fov_deg, aspect=width_px / height_px, nearVal=0.05, farVal=50.0)
+    projection = p.computeProjectionMatrixFOV(fov=fov_deg, aspect=width_px / height_px, nearVal=0.05, farVal=100.0)
     _, _, rgba, _, _ = p.getCameraImage(width_px, height_px, view, projection, renderer=renderer)
-    return np.reshape(rgba, (height_px, width_px, 4))[:, :, :3]
+    # PyBullet's Python return type varies by build. Normalize signed integer
+    # lists/arrays at the adapter boundary so OpenCV always receives RGB8.
+    pixels = np.asarray(rgba, dtype=np.uint8)
+    return pixels.reshape(height_px, width_px, 4)[:, :, :3]
 
 
 def run(gui: bool, max_seconds: float) -> None:
@@ -109,6 +112,7 @@ def self_check() -> None:
     image = forward_rgb(drone, p.ER_TINY_RENDERER)
     red_pixels = (image[:, :, 0] > 120) & (image[:, :, 0] > image[:, :, 1] * 2) & (image[:, :, 0] > image[:, :, 2] * 2)
     assert image.shape == (CAMERA_HEIGHT, CAMERA_WIDTH, 3), "Forward camera must return an RGB image"
+    assert image.dtype == np.uint8, "Forward camera must normalize PyBullet pixels to RGB8"
     assert red_pixels.any(), "Forward camera should see the red target cube"
     print("Forward camera self-check passed")
 

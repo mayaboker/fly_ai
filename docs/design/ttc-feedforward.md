@@ -1,8 +1,5 @@
 # Early TTC Descent Feed-Forward
 
-This original plan is retained for history. The reviewed plan and current
-validation evidence are maintained in [ttc-feedforward.md](ttc-feedforward.md).
-
 ## Problem
 
 Tracking starts after takeoff, but the bounding-box TTC estimate is initially
@@ -43,3 +40,30 @@ TTC grows near the target.
 Validate the pitch fallback with visible/no-TTC, valid-TTC, and target-lost
 inputs. In the seven-inch headless run, confirm commanded pitch remains at or
 below `25 deg` and the strike succeeds.
+
+## Implementation review
+
+The planner, guidance fallback, configuration fields, corrected vertical
+target telemetry, and focused tests are already present in the current code.
+The remaining validation gap is in the simulation adapter: the installed
+PyBullet binding returns camera pixels as a signed integer array, while OpenCV
+5 accepts only supported image depths. Normalize PyBullet RGBA samples to
+`uint8` inside `forward_rgb()` before detection. This is a representation-only
+boundary fix and does not change TTC estimation or guidance behavior.
+
+The default target's new 50 m horizontal separation also exceeds the
+compatibility camera's 50 m far plane once the altitude offset is included.
+Increase that renderer-only far plane to 100 m so the maintained headless
+scenario observes the same target that Godot can see. Keep FOV, detector
+thresholds, TTC filtering, and all flight commands unchanged.
+
+Godot validation evidence: the seven-inch trainer began tracking at 5.200 s
+with a raw `-1.5 m/s` vertical command and a 25 deg pitch command. TTC became
+valid at 6.167 s, where pitch returned to 20 deg. Maximum commanded pitch was
+25 deg, and target contact occurred at 12.508 s with an 8.456 m/s impact.
+
+Headless validation evidence after camera normalization: the default scenario
+contacted at 13.200 s with a 7.300 m/s impact, and the seven-inch scenario
+contacted at 12.567 s with an 8.378 m/s impact. The default scenario's prior
+4.396 s target-loss abort was reproduced with the 50 m far plane and resolved
+by the 100 m renderer-only far plane. All focused tests and the self-check pass.
