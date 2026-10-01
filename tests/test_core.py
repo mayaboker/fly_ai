@@ -38,7 +38,7 @@ def test_ttc_unavailable_descent_feedforward_is_bounded_and_optional():
     assert planner.command(1.0, config.takeoff_altitude_m).vertical_velocity_mps == -config.max_descent_velocity_mps
 
 
-def test_visible_target_without_ttc_gets_only_the_configured_pitch_boost():
+def test_pitch_boost_latches_until_ttc_decreases_reliably():
     config = replace(MissionConfig(), ttc_unavailable_pitch_boost_deg=5.0)
     tracker = BboxTtcTracker(config)
     tracker.update((0, 0, 20, 20), 0.0)
@@ -50,9 +50,14 @@ def test_visible_target_without_ttc_gets_only_the_configured_pitch_boost():
     assert guidance.phase == FlightPhase.TRACK
 
     boosted = guidance.update(GuidanceInput(0.1, reading, None, observation, True, False))
-    valid = guidance.update(GuidanceInput(0.2, reading, observation, observation, True, False))
+    baseline = guidance.update(GuidanceInput(0.2, reading, observation, observation, True, False))
+    decreasing = replace(observation, ttc_s=observation.ttc_s * 0.8)
+    guidance.update(GuidanceInput(0.3, reading, decreasing, decreasing, True, False))
+    guidance.update(GuidanceInput(0.4, reading, replace(decreasing), decreasing, True, False))
+    released = guidance.update(GuidanceInput(0.5, reading, replace(decreasing), decreasing, True, False))
     assert degrees(boosted.pitch_target_rad) == 25.0
-    assert degrees(valid.pitch_target_rad) == 20.0
+    assert degrees(baseline.pitch_target_rad) == 25.0
+    assert round(degrees(released.pitch_target_rad), 6) == 23.0
 
     unboosted = StrikeGuidance(MissionConfig())
     unboosted.update(GuidanceInput(0.0, reading, observation, observation, True, False))

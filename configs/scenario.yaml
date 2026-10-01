@@ -39,6 +39,7 @@ runtime:
     commit_box_height_fraction: 0.1  # Bbox height fraction that arms commit.
     alpha: 0.85                       # Trust in each measured bbox scale.
     beta: 0.05                        # Trust in the bbox-scale-rate correction.
+    ttc_unavailable_pitch_boost_deg: 5.0  # Allow up to 25 deg until TTC decreases reliably.
   sensors:
     barometer:
       sample_hz: 40.0                 # BMP388 barometer rate, independent of the camera.
@@ -55,3 +56,5 @@ runtime:
   vertical_estimator:
     alpha: 0.08
     beta: 0.005
+  vertical_control:
+    vertical_position_correction: 0.3  # Gentle convergence without saturating the TTC descent.
