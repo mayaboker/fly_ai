@@ -29,4 +29,4 @@ implementation commit hash; a commit cannot contain its own final hash.
 | [Simulation performance instrumentation](performance-instrumentation.md) | Record stage timings, renderer counters, and real-time factor for offline analysis. | Implemented | `d5ecf6d` | — |
 | [Asynchronous live telemetry plotting](async-live-plot.md) | Isolate Matplotlib in a worker using incremental shared-memory transport. | Implemented | `d5ecf6d` | — |
 | [Deadline-based real-time pacing](deadline-realtime-pacing.md) | Pace GUI and Godot runs against absolute monotonic deadlines. | Implemented | `d5ecf6d` | — |
-| [Godot 30 Hz FPV capture](godot-30hz-camera.md) | Align unique Godot frames with the configured 30 Hz camera cadence. | Implemented | Pending | — |
+| [Godot 30 Hz FPV capture](godot-30hz-camera.md) | Align unique Godot frames with the configured 30 Hz camera cadence. | Implemented | `3330205` | — |
