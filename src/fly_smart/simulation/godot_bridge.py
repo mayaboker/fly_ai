@@ -79,6 +79,10 @@ class GodotBridge:
         """Tell Godot whether to show controls and which actions are valid."""
         self._send({"controls": {"enabled": enabled, "running": running}})
 
+    def publish_render_settings(self, capture_hz: int) -> None:
+        """Configure renderer-owned behavior from the authoritative scenario."""
+        self._send({"render_settings": {"capture_hz": capture_hz}})
+
     def _send(self, payload: dict[str, object]) -> None:
         """Encode and send one compact renderer packet."""
         self._socket.sendto(json.dumps(payload, separators=(",", ":"), allow_nan=False).encode("utf-8"), self.destination)

@@ -176,6 +176,7 @@ class StrikeSimulation:
                 live_plot.reset()
             if self.godot:
                 self.godot.clear_collision_events()
+                self.godot.publish_render_settings(config.camera_hz)
                 target_position, target_orientation = p.getBasePositionAndOrientation(cube)
                 self.godot.publish_pose(config.launch_position, (0, 0, 0, 1), target_position, target_orientation, reset=True)
                 self.godot.publish_control_state(interactive, controls.running if controls else True)

@@ -80,6 +80,16 @@ def test_publish_control_state_uses_renderer_channel():
     assert json.loads(bridge._socket.payload) == {"controls": {"enabled": True, "running": False}}
 
 
+def test_publish_render_settings_uses_configured_camera_rate():
+    bridge = GodotBridge.__new__(GodotBridge)
+    bridge.destination = ("127.0.0.1", 9100)
+    bridge._socket = _RecordingSocket()
+
+    bridge.publish_render_settings(30)
+
+    assert json.loads(bridge._socket.payload) == {"render_settings": {"capture_hz": 30}}
+
+
 def test_performance_packet_does_not_hide_collision_event():
     bridge = GodotBridge.__new__(GodotBridge)
     bridge._event_socket = _EventSocket([

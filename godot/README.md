@@ -5,6 +5,10 @@ PyBullet drone and target poses on UDP `127.0.0.1:9100`. Its FPV `SubViewport`
 is copied as RGB8 frames into `/dev/shm/fly_smart_fpv.rgb` using the working
 double-buffered format from `godot_shm_fpv`.
 
+Python publishes the scenario camera rate to Godot. The renderer targets 30 Hz
+by default with an absolute capture deadline, so GPU readback time is included
+inside the frame budget instead of being followed by a full timer interval.
+
 The world uses the bundled Terrain3D 1.0.0 addon for Godot 4.3. A deterministic
 textured forest terrain stays level through the road corridor and rises gently
 away from it. Selected roadside trees and rocks are collision obstacles;

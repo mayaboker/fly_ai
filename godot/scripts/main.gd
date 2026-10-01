@@ -4,7 +4,7 @@ extends Node3D
 const SHM_PATH := "/dev/shm/fly_smart_fpv.rgb"
 const WIDTH := 640
 const HEIGHT := 360
-const FPS := 15.0
+const DEFAULT_CAPTURE_HZ := 30.0
 const HEADER_BYTES := 32
 const FRAME_BYTES := WIDTH * HEIGHT * 3  # tightly packed RGB8
 const POSE_PORT := 9100
@@ -29,6 +29,11 @@ var _sequence := 0
 var _capture_count := 0
 var _capture_total_usec := 0
 var _write_total_usec := 0
+var _capture_hz := DEFAULT_CAPTURE_HZ
+var _capture_period_usec := int(1000000.0 / DEFAULT_CAPTURE_HZ)
+var _capture_deadline_usec := 0
+var _capture_deadline_misses := 0
+var _capture_rebases := 0
 var _performance_last_report_ms := 0
 var _latest_pose: Dictionary = {}
 var _collision_reported := false
@@ -150,6 +155,9 @@ func _receive_latest_pose() -> void:
 		var controls: Variant = value.get("controls")
 		if controls is Dictionary:
 			_update_control_panel(bool(controls.get("enabled", false)), bool(controls.get("running", false)))
+		var render_settings: Variant = value.get("render_settings")
+		if render_settings is Dictionary:
+			_configure_capture_hz(render_settings.get("capture_hz"))
 
 
 func _apply_pose(raw_pose: Variant, node: Node3D) -> void:
@@ -459,8 +467,19 @@ func _open_shared_memory() -> void:
 
 
 func _capture_loop() -> void:
+	_capture_deadline_usec = Time.get_ticks_usec()
 	while is_inside_tree() and _shm != null:
 		await RenderingServer.frame_post_draw
+		var now_usec := Time.get_ticks_usec()
+		if now_usec < _capture_deadline_usec:
+			continue
+		var lateness_usec := now_usec - _capture_deadline_usec
+		if lateness_usec > 1000:
+			_capture_deadline_misses += 1
+		if lateness_usec > _capture_period_usec:
+			_capture_deadline_usec = now_usec
+			_capture_rebases += 1
+		_capture_deadline_usec += _capture_period_usec
 		var capture_started := Time.get_ticks_usec()
 		var image := _fpv_viewport.get_texture().get_image()
 		if not image.is_empty():
@@ -472,13 +491,25 @@ func _capture_loop() -> void:
 				_write_frame(pixels)
 				_write_total_usec += Time.get_ticks_usec() - write_started
 				_capture_count += 1
-		await get_tree().create_timer(1.0 / FPS).timeout
+
+
+func _configure_capture_hz(raw_hz: Variant) -> void:
+	"""Apply a validated capture rate and restart its absolute schedule."""
+	var requested_hz := DEFAULT_CAPTURE_HZ
+	if (raw_hz is int or raw_hz is float) and is_finite(float(raw_hz)):
+		var numeric_hz := float(raw_hz)
+		if numeric_hz >= 1.0 and numeric_hz <= 240.0:
+			requested_hz = numeric_hz
+	_capture_hz = requested_hz
+	_capture_period_usec = maxi(1, int(round(1000000.0 / _capture_hz)))
+	_capture_deadline_usec = Time.get_ticks_usec()
 
 
 func _publish_performance_if_due() -> void:
 	"""Publish low-rate renderer counters over the existing event socket."""
 	var now_ms := Time.get_ticks_msec()
-	if now_ms - _performance_last_report_ms < 1000:
+	var interval_ms := now_ms - _performance_last_report_ms
+	if interval_ms < 1000:
 		return
 	var capture_average_ms := 0.0
 	var write_average_ms := 0.0
@@ -490,6 +521,10 @@ func _publish_performance_if_due() -> void:
 		"process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
 		"physics_process_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
 		"capture_count": _capture_count,
+		"capture_target_hz": _capture_hz,
+		"capture_actual_hz": float(_capture_count) * 1000.0 / float(interval_ms),
+		"capture_deadline_misses": _capture_deadline_misses,
+		"capture_rebases": _capture_rebases,
 		"capture_average_ms": capture_average_ms,
 		"write_average_ms": write_average_ms,
 		"objects": Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
@@ -499,6 +534,8 @@ func _publish_performance_if_due() -> void:
 	_capture_count = 0
 	_capture_total_usec = 0
 	_write_total_usec = 0
+	_capture_deadline_misses = 0
+	_capture_rebases = 0
 	_performance_last_report_ms = now_ms
 
 
