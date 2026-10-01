@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TTC diagonal strike",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "fly_smart.cli",
+      "console": "integratedTerminal",
+      "args": ["--config", "${workspaceFolder}/configs/scenario.yaml"]
+    }
+  ]
+}

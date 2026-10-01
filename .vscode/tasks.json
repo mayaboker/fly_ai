@@ -1,0 +1,46 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Godot Renderer",
+      "type": "shell",
+      "command": "godot --path godot",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "godot",
+        "pattern": { "regexp": "^ERROR: (.*)$", "message": 1 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Godot Engine",
+          "endsPattern": "FPV shared memory ready:"
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Run Fly Smart",
+      "type": "shell",
+      "command": "uv run fly-smart --config configs/scenario.yaml",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Fly Smart with Godot",
+      "type": "shell",
+      "command": "uv run fly-smart --godot --headless --show-plots --interactive --config configs/scenario.yaml",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Run Fly Smart and Godot",
+      "dependsOrder": "sequence",
+      "dependsOn": ["Run Godot Renderer", "Run Fly Smart with Godot"],
+      "problemMatcher": []
+    },
+    {
+      "label": "TTC self-check",
+      "type": "shell",
+      "command": "uv run fly-smart --self-check",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+# Generic 1.5 kg seven-inch trainer. Mass and inertia live in the linked URDF.
+name: 7inch
+urdf: seven_inch_trainer.urdf
+actuators:
+  motor_kv_rpm_per_v: 900.9009009
+  max_thrust_per_motor_n: 12.0
+  motor_time_constant_s: 0.07
+  rotor_drag_coefficient: 0.000003
+  motor_yaw_signs: [1, -1, -1, 1]
+battery:
+  cell_count: 6
+  cell_voltage_full_v: 4.2
+  cell_voltage_nominal_v: 3.7
+  cell_voltage_empty_v: 3.3
+  capacity_ah: 1.8
+  internal_resistance_ohm: 0.015
+  max_discharge_current_a: 180.0
+  full_throttle_current_per_motor_a: 45.0
+propeller:
+  name: Generic seven-inch course propeller
+  diameter_in: 7.0
+  source: Pitch, blade count, and mounting details are intentionally unknown for this generic profile.
+aerodynamics:
+  body_drag_cd_area_m2: [0.020, 0.020, 0.030]
+  angular_damping_nm_per_rad_s: [0.0018, 0.0018, 0.0030]
+  rotor_inertia_kg_m2: 0.000008

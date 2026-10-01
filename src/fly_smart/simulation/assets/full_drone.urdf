@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!-- Shared quadcopter asset used by flight-control and camera examples. -->
+<robot name="manual_takeoff_drone">
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0"/>
+      <mass value="0.65"/>
+      <inertia ixx="0.00348" ixy="0" ixz="0" iyy="0.00348" iyz="0" izz="0.00396"/>
+    </inertial>
+    <collision><geometry><box size="0.16 0.16 0.05"/></geometry></collision>
+    <visual><geometry><box size="0.12 0.12 0.04"/></geometry><material name="body"><color rgba="0.08 0.13 0.22 1"/></material></visual>
+    <visual><geometry><box size="0.31 0.025 0.015"/></geometry><material name="arm"><color rgba="0.25 0.35 0.50 1"/></material></visual>
+    <visual><geometry><box size="0.025 0.31 0.015"/></geometry><material name="arm"><color rgba="0.25 0.35 0.50 1"/></material></visual>
+    <visual><origin xyz="0.12 0.12 0.02"/><geometry><cylinder radius="0.035" length="0.025"/></geometry><material name="motor"><color rgba="0.10 0.65 1 1"/></material></visual>
+    <visual><origin xyz="0.12 -0.12 0.02"/><geometry><cylinder radius="0.035" length="0.025"/></geometry><material name="motor"><color rgba="0.10 0.65 1 1"/></material></visual>
+    <visual><origin xyz="-0.12 0.12 0.02"/><geometry><cylinder radius="0.035" length="0.025"/></geometry><material name="motor"><color rgba="0.10 0.65 1 1"/></material></visual>
+    <visual><origin xyz="-0.12 -0.12 0.02"/><geometry><cylinder radius="0.035" length="0.025"/></geometry><material name="motor"><color rgba="0.10 0.65 1 1"/></material></visual>
+  </link>
+  <link name="rotor_0"><inertial><mass value="0"/><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/></inertial></link><joint name="rotor_0_joint" type="fixed"><parent link="base_link"/><child link="rotor_0"/><origin xyz="0.12 0.12 0.02"/></joint>
+  <link name="rotor_1"><inertial><mass value="0"/><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/></inertial></link><joint name="rotor_1_joint" type="fixed"><parent link="base_link"/><child link="rotor_1"/><origin xyz="0.12 -0.12 0.02"/></joint>
+  <link name="rotor_2"><inertial><mass value="0"/><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/></inertial></link><joint name="rotor_2_joint" type="fixed"><parent link="base_link"/><child link="rotor_2"/><origin xyz="-0.12 0.12 0.02"/></joint>
+  <link name="rotor_3"><inertial><mass value="0"/><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/></inertial></link><joint name="rotor_3_joint" type="fixed"><parent link="base_link"/><child link="rotor_3"/><origin xyz="-0.12 -0.12 0.02"/></joint>
+</robot>

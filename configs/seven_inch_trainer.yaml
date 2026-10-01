@@ -1,0 +1,66 @@
+# Same TTC scene with the generic 1.5 kg seven-inch trainer selected.
+simulation:
+  vehicle_model:
+    profile: seven_inch_trainer         # Motor, propeller, aero values; URDF supplies mass/inertia.
+  scene:
+    launch_position: [-5.25, 0.0, 0.05]
+    target_center: [40.0, 0.0, 1.0]
+    target_size_m: 2.0
+  physical_forces:
+    body_drag:
+      enabled: true
+    angular_damping:
+      enabled: true
+    wind:
+      enabled: true
+      world_velocity_mps: [0.0, 0.0, 0.0]
+  recording:
+    post_impact_seconds: 1.0             # Stop one simulated second after a confirmed hit.
+
+runtime:
+  physical_setup:
+    camera:
+      camera_width_px: 640
+      camera_height_px: 480
+      camera_hz: 30
+      camera_fov_deg: 90.0
+      camera_look_down_deg: 0.0
+  mission:
+    takeoff_altitude_m: 15.0
+    impact_altitude_m: 1.0
+    forward_speed_mps: 13.0
+    nominal_pitch_deg: 20.0
+  flight_limits:
+    max_descent_velocity_mps: 5.5         # Faster terminal descent for the heavier seven-inch trainer.
+    max_climb_velocity_mps: 3.0
+    max_pitch_deg: 20.0
+    takeoff_altitude_tolerance_m: 0.2
+    takeoff_velocity_tolerance_mps: 0.5
+    commit_timeout_margin_s: 5.0
+  ttc:
+    commit_box_height_fraction: 0.1
+    alpha: 0.85                         # Trust in each measured bbox scale.
+    beta: 0.05                          # Trust in the bbox-scale-rate correction.
+    ttc_unavailable_descent_velocity_mps: 1.5  # Start descent before TTC is reliable.
+    ttc_unavailable_pitch_boost_deg: 5.0  # Temporarily command up to 25 deg while bbox growth is invalid.
+  sensors:
+    barometer:
+      sample_hz: 40.0                   # BMP388 barometer rate, independent of the camera.
+      altitude_noise_sigma_m: 0.10      # BMP388 full-bandwidth altitude RMS noise [m].
+      altitude_bias_m: 0.0              # Fixed takeoff-reference offset [m].
+      drift_sigma_m_per_sqrt_s: 0.0     # Disabled slow field-drift random walk [m/sqrt(s)].
+      altitude_old_weight: 0.80         # Smooth raw altitude before control [0..1].
+      velocity_old_weight: 0.95         # Smooth noisy differentiated altitude into vertical speed [0..1].
+  pid:
+    altitude:
+      gains: [0.7, 0.05, 1.1]           # [kp, ki, kd]: altitude error to collective thrust.
+      integral_limit: 0.5
+    forward_speed:
+      gains: [0.03, 0.0, 0.002]         # [kp, ki, kd]: forward-speed error to pitch target.
+      integral_limit: 0.2
+    pitch_attitude:
+      gains: [0.008, 0.0, 0.006]        # [kp, ki, kd]: pitch error to motor torque.
+    vertical_velocity:
+      gains: [1.3, 0.0, 0.0]            # [kp, ki, kd]: descent-rate error to collective thrust.
+  vertical_control:
+    vertical_position_correction: 2.0    # Hold descent demand when TTC grows near the target.

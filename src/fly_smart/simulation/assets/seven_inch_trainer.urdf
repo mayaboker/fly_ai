@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!-- Generic 1.5 kg seven-inch X-frame trainer. -->
+<robot name="seven_inch_trainer">
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0"/>
+      <mass value="1.5"/>
+      <inertia ixx="0.012" ixy="0" ixz="0" iyy="0.012" iyz="0" izz="0.022"/>
+    </inertial>
+    <collision><geometry><box size="0.22 0.14 0.06"/></geometry></collision>
+    <visual><geometry><box size="0.22 0.14 0.05"/></geometry><material name="body"><color rgba="0.08 0.13 0.22 1"/></material></visual>
+    <visual><origin rpy="0 0 0.7854"/><geometry><box size="0.34 0.026 0.016"/></geometry><material name="arm"><color rgba="0.25 0.35 0.50 1"/></material></visual>
+    <visual><origin rpy="0 0 -0.7854"/><geometry><box size="0.34 0.026 0.016"/></geometry><material name="arm"><color rgba="0.25 0.35 0.50 1"/></material></visual>
+    <visual><origin xyz="0.12 0.12 0.025"/><geometry><cylinder radius="0.040" length="0.030"/></geometry><material name="motor"><color rgba="0.10 0.65 1 1"/></material></visual>
+    <visual><origin xyz="0.12 -0.12 0.025"/><geometry><cylinder radius="0.040" length="0.030"/></geometry><material name="motor"><color rgba="0.10 0.65 1 1"/></material></visual>
+    <visual><origin xyz="-0.12 0.12 0.025"/><geometry><cylinder radius="0.040" length="0.030"/></geometry><material name="motor"><color rgba="0.10 0.65 1 1"/></material></visual>
+    <visual><origin xyz="-0.12 -0.12 0.025"/><geometry><cylinder radius="0.040" length="0.030"/></geometry><material name="motor"><color rgba="0.10 0.65 1 1"/></material></visual>
+    <visual><origin xyz="0.12 0.12 0.045"/><geometry><cylinder radius="0.0889" length="0.004"/></geometry><material name="propeller"><color rgba="0.15 0.70 1 0.35"/></material></visual>
+    <visual><origin xyz="0.12 -0.12 0.045"/><geometry><cylinder radius="0.0889" length="0.004"/></geometry><material name="propeller"><color rgba="0.15 0.70 1 0.35"/></material></visual>
+    <visual><origin xyz="-0.12 0.12 0.045"/><geometry><cylinder radius="0.0889" length="0.004"/></geometry><material name="propeller"><color rgba="0.15 0.70 1 0.35"/></material></visual>
+    <visual><origin xyz="-0.12 -0.12 0.045"/><geometry><cylinder radius="0.0889" length="0.004"/></geometry><material name="propeller"><color rgba="0.15 0.70 1 0.35"/></material></visual>
+  </link>
+  <link name="rotor_0"><inertial><mass value="0"/><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/></inertial></link><joint name="rotor_0_joint" type="fixed"><parent link="base_link"/><child link="rotor_0"/><origin xyz="0.12 0.12 0.025"/></joint>
+  <link name="rotor_1"><inertial><mass value="0"/><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/></inertial></link><joint name="rotor_1_joint" type="fixed"><parent link="base_link"/><child link="rotor_1"/><origin xyz="0.12 -0.12 0.025"/></joint>
+  <link name="rotor_2"><inertial><mass value="0"/><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/></inertial></link><joint name="rotor_2_joint" type="fixed"><parent link="base_link"/><child link="rotor_2"/><origin xyz="-0.12 0.12 0.025"/></joint>
+  <link name="rotor_3"><inertial><mass value="0"/><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/></inertial></link><joint name="rotor_3_joint" type="fixed"><parent link="base_link"/><child link="rotor_3"/><origin xyz="-0.12 -0.12 0.025"/></joint>
+</robot>

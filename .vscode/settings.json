@@ -1,0 +1,6 @@
+{
+  "python.analysis.extraPaths": ["${workspaceFolder}/src"],
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "window.title": "${dirty}${activeEditorMedium}${separator}${rootName}${separator}${activeRepositoryBranchName}${separator}${appName}"
+}
